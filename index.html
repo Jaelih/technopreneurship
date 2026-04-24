@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Omsimulation</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════ LANDING SCREEN ═══════════════════════════════════ -->
+  <div id="screen-landing" class="screen active">
+    <nav class="topnav">
+      <div class="brand">
+        <span class="brand-icon">🌪️</span>
+        <span class="brand-name">Omsimulation</span>
+      </div>
+      <div class="nav-links">
+        <button onclick="App.show('simulation')" class="btn btn-ghost">Simulation</button>
+        <button onclick="App.show('dashboard')" class="btn btn-ghost">Dashboard</button>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-content">
+        <div class="hero-badge">Climate Education &amp; DRRM Training</div>
+        <h1 class="hero-title">Immersive Disaster<br>Preparedness Training</h1>
+        <p class="hero-subtitle">
+          Experience life-saving decisions through immersive VR disaster simulations.
+          Designed for Philippine LGUs, schools, and DRRM offices.
+        </p>
+        <div class="hero-actions">
+          <button onclick="App.show('simulation')" class="btn btn-primary btn-lg">
+            ▶ Start Simulation
+          </button>
+        </div>
+        <div class="hero-controls-hint">
+          <span>🖱 Mouse to look &nbsp;|&nbsp; WASD to move &nbsp;|&nbsp; VR headset supported</span>
+        </div>
+      </div>
+    </header>
+
+    <footer class="landing-footer">
+      <p>B2B/B2G SaaS platform for Philippine LGU DRRM Offices, Schools, and Science Centers</p>
+      <p class="footer-small">Omsimulation &copy; 2026 — Built for UST Technopreneur</p>
+    </footer>
+  </div>
+
+  <!-- ═══════════════════════════════════ SIMULATION SCREEN ═══════════════════════════════════ -->
+  <div id="screen-simulation" class="screen">
+    <div class="sim-topbar">
+      <button onclick="App.show('landing')" class="btn btn-ghost btn-sm">← Back</button>
+      <span class="sim-title">🌊 Typhoon Flood Simulation</span>
+      <div class="sim-topbar-right">
+        <button onclick="Simulation.restart()" class="btn btn-ghost btn-sm" title="Restart (R)">🔄 Restart</button>
+        <span class="badge badge-danger" id="sim-scenario-badge">FLOOD ALERT</span>
+      </div>
+    </div>
+
+    <div id="sim-container">
+      <!-- Three.js canvas rendered here -->
+
+      <!-- HUD Overlay -->
+      <div id="sim-hud">
+        <div class="hud-item">
+          <span class="hud-label">⏱ TIME</span>
+          <span class="hud-value" id="hud-time">00:00</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">💧 FLOOD</span>
+          <span class="hud-value" id="hud-flood">-- cm</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">⭐ SCORE</span>
+          <span class="hud-value" id="hud-score">0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">🏁 DECISIONS</span>
+          <span class="hud-value" id="hud-decisions">0/4</span>
+        </div>
+      </div>
+
+      <!-- Flood Level Bar -->
+      <div id="flood-bar-container">
+        <div id="flood-bar-label">Flood Level</div>
+        <div id="flood-bar-track">
+          <div id="flood-bar-fill"></div>
+        </div>
+        <div id="flood-bar-danger">⚠ DANGER</div>
+      </div>
+
+      <!-- Start Overlay -->
+      <div id="sim-start-overlay" class="sim-overlay">
+        <div class="sim-overlay-box">
+          <div class="overlay-icon">🏫</div>
+          <h2>Typhoon Flood Simulation</h2>
+          <p>You are on the <strong>2nd floor of a school</strong> in a Philippine coastal barangay. A Category 4 typhoon has just made landfall. Floodwaters are rising.</p>
+          <ul class="control-list">
+            <li>🖱 <strong>Click canvas</strong> to capture mouse (look around)</li>
+            <li>⬆⬇⬅➡ <strong>WASD / Arrow Keys</strong> to move</li>
+            <li>⇧ <strong>Shift</strong> to run faster</li>
+            <li>🔵🟠 <strong>Walk into glowing zones</strong> to make decisions</li>
+            <li>🥽 <strong>VR button</strong> for headset mode (if supported)</li>
+          </ul>
+          <p class="overlay-goal">
+            React to what you see. Alarms, road signs, and people in distress will trigger decisions automatically.
+            Reach the <span class="highlight">🏛 Community Center</span> on the hill before the floodwater rises too high.
+          </p>
+          <button id="btn-start-sim" class="btn btn-primary btn-lg">▶ Begin Simulation</button>
+        </div>
+      </div>
+
+      <!-- Decision HUD (non-blocking — player keeps moving) -->
+      <div id="decision-hud" class="hidden">
+        <div id="decision-hud-box">
+          <div class="decision-hud-badge">⚠️ DECISION POINT</div>
+          <p id="decision-hud-question"></p>
+          <div class="decision-hud-opts">
+            <span class="opt-tag opt-blue">🔵</span><span id="decision-hud-opt0"></span>
+            <span class="opt-tag opt-orange">🟠</span><span id="decision-hud-opt1"></span>
+          </div>
+          <div class="decision-hud-hint">Walk to a glowing zone to decide</div>
+        </div>
+      </div>
+
+      <!-- Feedback Toast -->
+      <div id="sim-feedback" class="sim-feedback hidden">
+        <span id="feedback-icon"></span>
+        <span id="feedback-text"></span>
+      </div>
+
+      <!-- Floor indicator -->
+      <div id="floor-indicator" style="position:absolute;bottom:20px;left:20px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;color:#fff;pointer-events:none;backdrop-filter:blur(6px)">
+        📍 Floor: <span id="floor-label">2nd Floor</span>
+      </div>
+
+      <!-- Result Overlay -->
+      <div id="sim-result-overlay" class="sim-overlay hidden">
+        <div class="sim-result-box">
+          <div id="result-icon" class="result-icon">🏆</div>
+          <h2 id="result-title">Simulation Complete</h2>
+          <div class="result-score-big" id="result-score">0 / 100</div>
+          <div id="result-decisions-list" class="result-decisions"></div>
+          <div id="result-autorestart" class="result-autorestart">Auto-restarting in <span id="result-autorestart-sec">10</span>s…</div>
+          <div class="result-actions">
+            <button onclick="Simulation.restart()" class="btn btn-primary">🔄 Play Again</button>
+            <button onclick="Simulation.cancelAutoRestart(); App.show('dashboard')" class="btn btn-secondary">📊 View Dashboard</button>
+            <button onclick="Simulation.cancelAutoRestart(); App.show('landing')" class="btn btn-ghost">🏠 Home</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ DASHBOARD SCREEN ═══════════════════════════════════ -->
+  <div id="screen-dashboard" class="screen">
+    <div class="screen-topbar">
+      <button onclick="App.show('landing')" class="btn btn-ghost btn-sm">← Back</button>
+      <span class="screen-title">📊 Instructor Dashboard</span>
+      <div style="display:flex;gap:8px;">
+        <button onclick="App.clearSessions()" class="btn btn-ghost btn-sm btn-danger-ghost">🗑 Clear All</button>
+        <button onclick="Dashboard.exportCSV()" class="btn btn-secondary btn-sm">↓ Export CSV</button>
+      </div>
+    </div>
+
+    <div class="dashboard-body">
+      <!-- Stat Cards -->
+      <div class="stats-row">
+        <div class="stat-card-dash">
+          <div class="scd-label">Total Sessions</div>
+          <div class="scd-value" id="dash-total">0</div>
+          <div class="scd-sub">simulations run</div>
+        </div>
+        <div class="stat-card-dash">
+          <div class="scd-label">Average Score</div>
+          <div class="scd-value" id="dash-avg">—</div>
+          <div class="scd-sub" id="dash-avg-max">out of 75</div>
+        </div>
+        <div class="stat-card-dash">
+          <div class="scd-label">Best Score</div>
+          <div class="scd-value" id="dash-best">—</div>
+          <div class="scd-sub">highest achieved</div>
+        </div>
+        <div class="stat-card-dash">
+          <div class="scd-label">Pass Rate</div>
+          <div class="scd-value" id="dash-pass">—</div>
+          <div class="scd-sub">≥ 75 score</div>
+        </div>
+        <div class="stat-card-dash">
+          <div class="scd-label">Correct Decisions</div>
+          <div class="scd-value" id="dash-correct">—</div>
+          <div class="scd-sub">across all sessions</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <h3>Score History</h3>
+          <canvas id="chart-scores"></canvas>
+        </div>
+        <div class="chart-card chart-card-sm">
+          <h3>Decision Accuracy</h3>
+          <canvas id="chart-decisions"></canvas>
+        </div>
+      </div>
+
+      <!-- Session Table -->
+      <div class="table-card">
+        <div class="table-header-row">
+          <h3>Session History</h3>
+          <div id="empty-state" class="empty-state">No sessions yet — run a simulation first!</div>
+        </div>
+        <div class="table-wrapper">
+          <table id="sessions-table" class="data-table hidden">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Date &amp; Time</th>
+                <th>Duration</th>
+                <th>Score</th>
+                <th>Survived</th>
+                <th>Decisions Made</th>
+                <th>Result</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="sessions-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Decision Breakdown -->
+      <div class="table-card">
+        <h3>Decision Breakdown (Latest Session)</h3>
+        <div id="decision-breakdown" class="decision-breakdown">
+          <p class="empty-state">Complete a simulation to see decision analysis.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts (order matters) -->
+  <script src="js/simulation.js"></script>
+  <script src="js/hazardMap.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
